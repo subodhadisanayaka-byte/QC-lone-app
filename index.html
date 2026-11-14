@@ -55,8 +55,8 @@
     <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16 gap-2">
         
-        <!-- Logo & Branding -->
-        <div class="flex items-center space-x-2.5 cursor-pointer min-w-0" onclick="switchView('client-portal')">
+        <!-- Logo & Branding (Tap 3x for Admin Access) -->
+        <div class="flex items-center space-x-2.5 cursor-pointer min-w-0 select-none" onclick="handleLogoClick()">
           <img src="logo.svg" alt="QC Lone Logo" class="w-10 h-10 rounded-xl shadow-lg shadow-emerald-500/20 shrink-0">
           <div class="min-w-0">
             <div class="flex items-center space-x-1.5 flex-wrap">
@@ -70,18 +70,12 @@
           </div>
         </div>
 
-        <!-- Role Switcher (Client View / Admin View) -->
-        <div class="flex items-center space-x-1 sm:space-x-1.5 bg-slate-800/90 p-1 rounded-xl border border-slate-700/80 shrink-0">
-          <button id="btn-nav-client" onclick="switchView('client-portal')" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all bg-emerald-600 text-white shadow-sm">
-            <i class="fa-solid fa-user text-[11px]"></i>
-            <span class="hidden xs:inline">Client</span>
-            <span class="xs:hidden">ණය</span>
-          </button>
-          <button id="btn-nav-admin" onclick="openAdminAuthModal()" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
-            <i class="fa-solid fa-shield-halved text-amber-400 text-[11px]"></i>
-            <span class="hidden xs:inline">Admin</span>
-            <span class="xs:hidden">පාලක</span>
-          </button>
+        <!-- Top Right: WhatsApp Support (Client Only View) -->
+        <div class="flex items-center space-x-2">
+          <a href="https://wa.me/60164245490" target="_blank" class="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-bold flex items-center space-x-1.5 transition">
+            <i class="fa-brands fa-whatsapp text-emerald-400 text-sm"></i>
+            <span class="hidden xs:inline font-sinhala">WhatsApp සහය</span>
+          </a>
         </div>
 
       </div>
@@ -880,6 +874,10 @@
         </div>
 
         <div class="flex items-center space-x-2 flex-wrap">
+          <button onclick="switchView('client-portal')" class="px-3 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-xs font-bold rounded-xl flex items-center space-x-1.5 transition" title="Exit Admin Panel">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            <span>පිටවීම (Exit)</span>
+          </button>
           <button onclick="exportDataBackup()" title="Download Backup" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl flex items-center space-x-1.5 transition">
             <i class="fa-solid fa-download"></i>
             <span>Backup</span>
@@ -1285,6 +1283,24 @@
       </form>
     </div>
   </div>
+
+  <!-- Public Footer with Discreet Staff Portal Link -->
+  <footer class="mt-auto border-t border-slate-900 bg-slate-950/80 py-6 px-4">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+      <div class="flex items-center space-x-2">
+        <img src="logo.svg" alt="QC Lone" class="w-5 h-5 rounded opacity-70">
+        <span class="text-xs text-slate-500 font-semibold">© 2026 QC LONE Microfinance. All rights reserved.</span>
+      </div>
+      <div class="flex items-center space-x-3 text-xs text-slate-600">
+        <span class="text-slate-500">24/7 පාරිභෝගික සහය</span>
+        <span>•</span>
+        <button onclick="openAdminAuthModal()" class="text-slate-700 hover:text-slate-400 transition text-[11px] flex items-center space-x-1" title="Staff Portal">
+          <i class="fa-solid fa-lock text-[9px]"></i>
+          <span>Staff Login</span>
+        </button>
+      </div>
+    </div>
+  </footer>
 
   <!-- Floating WhatsApp Support Button for Clients -->
   <div id="floating-whatsapp-btn" class="fixed bottom-5 left-4 sm:left-6 z-40 transition-all duration-300">

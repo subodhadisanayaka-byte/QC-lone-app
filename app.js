@@ -138,17 +138,53 @@ function switchView(viewName) {
     clientView.classList.remove('hidden');
     adminView.classList.add('hidden');
     if (floatingWhatsApp) floatingWhatsApp.classList.remove('hidden');
-    btnClient.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all bg-emerald-600 text-white shadow-sm';
-    btnAdmin.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all text-slate-300 hover:text-white hover:bg-slate-700/50';
+    if (btnClient) btnClient.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all bg-emerald-600 text-white shadow-sm';
+    if (btnAdmin) btnAdmin.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all text-slate-300 hover:text-white hover:bg-slate-700/50';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   } else if (viewName === 'admin-dashboard') {
     clientView.classList.add('hidden');
     adminView.classList.remove('hidden');
     if (floatingWhatsApp) floatingWhatsApp.classList.add('hidden');
-    btnAdmin.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all bg-emerald-600 text-white shadow-sm';
-    btnClient.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all text-slate-300 hover:text-white hover:bg-slate-700/50';
+    if (btnAdmin) btnAdmin.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all bg-emerald-600 text-white shadow-sm';
+    if (btnClient) btnClient.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all text-slate-300 hover:text-white hover:bg-slate-700/50';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     renderAdminDashboard();
   }
 }
+
+// --- DISCREET ADMIN ACCESS METHODS ---
+let logoClickCount = 0;
+let logoClickTimer = null;
+
+function handleLogoClick() {
+  logoClickCount++;
+  if (logoClickTimer) clearTimeout(logoClickTimer);
+  logoClickTimer = setTimeout(() => {
+    logoClickCount = 0;
+  }, 1200);
+
+  if (logoClickCount >= 3) {
+    logoClickCount = 0;
+    openAdminAuthModal();
+  } else if (logoClickCount === 1) {
+    switchView('client-portal');
+  }
+}
+
+function checkAdminUrlTrigger() {
+  const href = window.location.href;
+  if (href.includes('admin') || window.location.search.includes('admin') || window.location.hash.includes('admin')) {
+    openAdminAuthModal();
+  }
+}
+
+// Keyboard Shortcut: Ctrl + Shift + A or Alt + A
+window.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) || (e.altKey && (e.key === 'A' || e.key === 'a'))) {
+    e.preventDefault();
+    openAdminAuthModal();
+  }
+});
 
 function showClientSection(section) {
   const sections = ['calc', 'apply', 'repay', 'status'];
@@ -1539,4 +1575,5 @@ window.addEventListener('DOMContentLoaded', () => {
   updateAdminStats();
   initSignaturePads();
   updateFloatingWhatsAppLink();
+  checkAdminUrlTrigger();
 });
