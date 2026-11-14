@@ -13,7 +13,7 @@ const DEFAULT_DAILY_LATE_FEE = 50; // LKR 50 per day overdue
 // Clean Initial State (ZERO Demo Data)
 let state = {
   adminPin: ADMIN_DEFAULT_PIN,
-  supportPhone: '0771234567',
+  supportPhone: '+60164245490',
   dailyLateFee: DEFAULT_DAILY_LATE_FEE,
   oneActiveLoanOnly: true,
   clients: [],
@@ -39,6 +39,9 @@ function loadState() {
         parsed.payments = parsed.payments.filter(p => p.id !== 'PAY-301');
       }
       state = Object.assign(state, parsed);
+      if (!state.supportPhone || state.supportPhone === '0771234567') {
+        state.supportPhone = '+60164245490';
+      }
     }
   } catch (e) {
     console.error('Failed to load local storage state:', e);
@@ -1261,7 +1264,7 @@ function closeDocViewerModal() {
 function openAdminSettingsModal() {
   document.getElementById('modal-admin-settings').classList.remove('hidden');
   document.getElementById('modal-admin-settings').classList.add('flex');
-  document.getElementById('settings-support-phone').value = state.supportPhone || '0771234567';
+  document.getElementById('settings-support-phone').value = state.supportPhone || '+60164245490';
   document.getElementById('settings-daily-late-fee').value = state.dailyLateFee !== undefined ? state.dailyLateFee : 50;
   document.getElementById('settings-one-loan-rule').value = state.oneActiveLoanOnly !== false ? 'true' : 'false';
   document.getElementById('settings-current-pin').value = '';
@@ -1508,9 +1511,13 @@ function generateLoanAgreementPDF(loanId) {
 function updateFloatingWhatsAppLink() {
   const link = document.getElementById('link-floating-whatsapp');
   if (!link) return;
-  const phone = (state.supportPhone || '0771234567').replace(/^0/, '94').replace(/\s+/g, '');
+  let rawPhone = (state.supportPhone || '+60164245490').toString().trim();
+  let cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+  if (cleanPhone.startsWith('0')) {
+    cleanPhone = '94' + cleanPhone.substring(1);
+  }
   const msg = encodeURIComponent('ආයුබෝවන් QC Lone! මට ණය ලබාගැනීම හෝ ලියාපදිංචිය සම්බන්ධයෙන් සහයක් අවශ්‍යයි.');
-  link.href = `https://wa.me/${phone}?text=${msg}`;
+  link.href = `https://wa.me/${cleanPhone}?text=${msg}`;
 }
 
 // Backup Export
