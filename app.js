@@ -567,6 +567,18 @@ function handleLoanApplicationSubmit(e) {
   state.loans.unshift(newLoan);
   saveState();
 
+  // Send to Railway Cloud PostgreSQL Backend
+  const clientPayload = existingClient || state.clients[state.clients.length - 1];
+  fetch('/api/loans/apply', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ client: clientPayload, loan: newLoan })
+  }).then(r => r.json()).then(res => {
+    if (res && res.success) {
+      console.log('✅ Loan saved to Railway Cloud Database:', res.loanId);
+    }
+  }).catch(err => console.warn('Cloud sync note:', err));
+
   // Reset form
   document.getElementById('loan-application-form').reset();
   clearSignature('canvas-sign-terms');
@@ -584,13 +596,31 @@ function handleLoanApplicationSubmit(e) {
 }
 
 // --- CLIENT LOAN STATUS TRACKING ---
-function checkClientLoanStatus() {
+async function checkClientLoanStatus() {
   const nic = document.getElementById('status-search-nic').value.trim();
   const container = document.getElementById('status-result-container');
 
   if (!nic) {
     showToast('කරුණාකර NIC අංකය ඇතුළත් කරන්න!', 'error');
     return;
+  }
+
+  // Fetch live from Railway Cloud PostgreSQL
+  try {
+    const res = await fetch('/api/loans/status?nic=' + encodeURIComponent(nic));
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && Array.isArray(data.loans)) {
+        data.loans.forEach(cloudLoan => {
+          const idx = state.loans.findIndex(l => l.id === cloudLoan.id);
+          if (idx >= 0) state.loans[idx] = cloudLoan;
+          else state.loans.unshift(cloudLoan);
+        });
+        saveState();
+      }
+    }
+  } catch (err) {
+    console.warn('Live status fetch note:', err);
   }
 
   const loans = state.loans.filter(l => l.clientNic.toLowerCase() === nic.toLowerCase());
@@ -787,6 +817,15 @@ function handleRepaymentSubmit(e) {
     state.payments.unshift(newPayment);
     saveState();
 
+    // Send to Railway Cloud PostgreSQL
+    fetch('/api/payments/repay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payment: newPayment })
+    }).then(r => r.json()).then(res => {
+      if (res && res.success) console.log('✅ Repayment slip saved to Railway Cloud DB:', res.paymentId);
+    }).catch(err => console.warn('Payment cloud sync note:', err));
+
     document.getElementById('repayment-form').reset();
     document.getElementById('repay-loan-found-card')?.classList.add('hidden');
     showToast('ගෙවීම් Slip පත සාර්ථකව යොමු කළා! Admin විසින් පරීක්ෂා කර තහවුරු කරනු ඇත.', 'success');
@@ -813,11 +852,64 @@ function verifyAdminPin() {
   if (pin === state.adminPin) {
     closeAdminAuthModal();
     switchView('admin-dashboard');
+    syncAdminDataFromBackend();
     showToast('QC Lone Admin පද්ධතියට සාදරයෙන් පිළිගනිමු!', 'success');
   } else {
     document.getElementById('admin-auth-error').classList.remove('hidden');
   }
 }
+
+// --- RAILWAY CLOUD BACKEND SYNC ---
+let isAdminSyncing = false;
+async function syncAdminDataFromBackend() {
+  if (isAdminSyncing) return;
+  isAdminSyncing = true;
+  try {
+    const res = await fetch(`/api/admin/data?pin=${encodeURIComponent(state.adminPin)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && data.state) {
+        state = Object.assign(state, data.state);
+        saveState();
+        updateAdminStats();
+        renderPendingLoansTable();
+        renderWeeklyDuesTable();
+        renderRepaymentSlipsTable();
+        renderAllClientsTable();
+      }
+    }
+  } catch (e) {
+    console.warn('Backend sync note:', e);
+  } finally {
+    isAdminSyncing = false;
+  }
+}
+
+async function sendAdminActionToBackend(action, data) {
+  try {
+    const res = await fetch('/api/admin/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: state.adminPin, action, data })
+    });
+    const result = await res.json();
+    if (result && result.success && result.state) {
+      state = Object.assign(state, result.state);
+      saveState();
+      renderAdminDashboard();
+    }
+  } catch (e) {
+    console.warn('Admin action sync note:', e);
+  }
+}
+
+// Auto-poll Railway DB every 10 seconds while viewing Admin Panel
+setInterval(() => {
+  const adminView = document.getElementById('view-admin-dashboard');
+  if (adminView && !adminView.classList.contains('hidden')) {
+    syncAdminDataFromBackend();
+  }
+}, 10000);
 
 // --- ADMIN DASHBOARD RENDERING ---
 function renderAdminDashboard() {
@@ -948,6 +1040,7 @@ function approveLoan(loanId) {
 
   saveState();
   renderAdminDashboard();
+  sendAdminActionToBackend('APPROVE_LOAN', { loanId });
   showToast(`${loan.clientName} මහතාගේ රු. ${loan.principalAmount.toLocaleString()} ණය අනුමත විය! සතිපතා චක්‍රය ආරම්භ විය.`, 'success');
 
   if (window.confetti) {
@@ -962,6 +1055,7 @@ function rejectLoan(loanId) {
   loan.status = 'REJECTED';
   saveState();
   renderAdminDashboard();
+  sendAdminActionToBackend('REJECT_LOAN', { loanId });
   showToast(`ණය අයදුම්පත ප්‍රතික්ෂේප විය. Online ගෙවූ රු. 100 දින 7ක් ඇතුළත ආපසු Refund කළ යුතුය!`, 'error');
 }
 
@@ -1176,6 +1270,7 @@ function approveRepaymentSlip(paymentId) {
 
   saveState();
   renderAdminDashboard();
+  sendAdminActionToBackend('VERIFY_PAYMENT', { paymentId });
 }
 
 // 4. All Clients Table
@@ -1357,6 +1452,12 @@ function handleAdminSettingsSave(e) {
   saveState();
   closeAdminSettingsModal();
   renderAdminDashboard();
+  sendAdminActionToBackend('UPDATE_SETTINGS', {
+    supportPhone: phone,
+    dailyLateFee: lateFee,
+    oneActiveLoanOnly: oneLoanRule,
+    newPin: (newPin && newPin === confirmPin) ? newPin : null
+  });
 }
 
 // --- MANUAL LOAN CREATION ---
@@ -1389,7 +1490,7 @@ function handleManualLoanSubmit(e) {
   const loanId = 'LONE-' + Math.floor(100 + Math.random() * 900);
   const weeklyInterest = Math.round(amount * WEEKLY_INTEREST_RATE);
 
-  state.loans.unshift({
+  const manualLoan = {
     id: loanId,
     clientId: 'CLI-' + Math.floor(100 + Math.random() * 900),
     clientName: name,
@@ -1411,11 +1512,16 @@ function handleManualLoanSubmit(e) {
       termsData: null,
       truthData: null
     }
-  });
+  };
 
+  state.loans.unshift(manualLoan);
   saveState();
   closeManualLoanModal();
   renderAdminDashboard();
+  sendAdminActionToBackend('MANUAL_LOAN', {
+    client: { id: manualLoan.clientId, name, nic, phone, registeredAt: today.toISOString().split('T')[0] },
+    loan: manualLoan
+  });
   showToast(`${name} මහතාට රු. ${amount.toLocaleString()} ක ණය මුදල සෘජුවම එකතු කරන ලදී!`, 'success');
 }
 
