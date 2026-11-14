@@ -1,0 +1,19 @@
+{
+  "name": "qc-lone-microfinance",
+  "version": "1.0.0",
+  "description": "QC Lone - Microfinance & Weekly Loan Management Web App",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "microfinance",
+    "loan-management",
+    "qc-lone"
+  ],
+  "author": "QC Lone Finance",
+  "license": "ISC"
+}
